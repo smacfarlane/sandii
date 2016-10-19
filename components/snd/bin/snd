@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# This is a stub command for a proof-of-concept.
+# Its only mission in life is to hand arguments
+#  off to a sub-command.
+
+subcommand=$1
+shift
+
+snd-${subcommand} $@

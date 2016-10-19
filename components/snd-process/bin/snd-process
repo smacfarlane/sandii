@@ -1,0 +1,251 @@
+#!/bin/bash
+: ${SND_ROOT_PATH:=$(pwd)}
+: ${SND_WORK_PATH:=$SND_ROOT_PATH/work}
+
+snd_name="unknown"
+snd_cache_globs=("*")
+snd_process_type="$1"
+shift
+
+if [[ -h $BASH_SOURCE ]]; then
+  readonly snd_lib_path=$(dirname $(readlink $BASH_SOURCE))/../lib
+else
+  readonly snd_lib_path=$(dirname $BASH_SOURCE)/../lib
+fi
+
+_clean_cache_directory() {
+  if [[ -z "$_snd_cache:+x" ]]; then
+    if [[ -d $_snd_cache ]]; then
+      # TODO: Any additional safety checks?
+      rm -rf $_snd_cache/*
+    fi;
+  fi;
+}
+
+_create_workspace() {
+  local _unique_workspace="$(basename ${input})-$(date +'%Y%m%d%H%M%S')"
+  _snd_instance_workspace="${SND_WORK_PATH}/$_unique_workspace"
+
+  if [[ ! -d $_snd_instance_workspace ]]; then
+    debug "Creating WORKSPACE at $_snd_instance_workspace"
+    mkdir -p $_snd_instance_workspace &> /dev/null
+    _retval=$?
+    if [[ $_retval != 0 ]]; then
+      _exit $_retval "Unable to create WORKSPACE ${_snd_instance_workspace}"
+    fi
+  fi
+}
+
+_enter_workspace() {
+  debug "ENTERING WORKSPACE: $_snd_instance_workspace"
+  cd $_snd_instance_workspace
+}
+
+_clean_workspace() {
+  # Return if the data isn't being cached
+  if [[ -z "$_snd_cache" ]]; then
+    return 0
+  fi
+  # Return if DEBUG is set
+  if [[ ${DEBUG:+x} ]]; then
+    return 0
+  fi
+
+  debug $_snd_instance_workspace
+  #TODO: Ensure we're not wiping out /
+  # rm -rf $_snd_instance_workspace
+}
+
+_exit() {
+  status=$1
+  shift
+  error "${@}"
+  exit $status
+}
+
+warn() {
+  case "${TERM:-}" in
+    *term | xterm-* | rxvt | screen | screen-*)
+      echo -e "   \033[1;33m${snd_name}: \033[1;37m$1\033[0m"
+      ;;
+    *)
+      echo "    ${snd_name}: $1"
+      ;;
+  esac
+  return 0
+}
+
+error() {
+  case "${TERM:-}" in
+    *term | xterm-* | rxvt | screen | screen-*)
+      echo -e "   \033[1;31m${snd_name}: \033[1;37m$1\033[0m"
+      ;;
+    *)
+      echo "    ${snd_name}: $1"
+      ;;
+  esac
+  return 0
+}
+
+debug() {
+  if [[ ! ${DEBUG:+x} ]]; then
+    return 0
+  fi
+  case "${TERM:-}" in
+    *term | xterm-* | rxvt | screen | screen-*)
+      echo -e "   \033[1;35m${snd_name}: \033[1;37m$1\033[0m"
+      ;;
+    *)
+      echo "   ${snd_name}: $1"
+      ;;
+  esac
+  return 0
+}
+
+info() {
+  case "${TERM:-}" in
+    *term | xterm-* | rxvt | screen | screen-*)
+      echo -e "   \033[1;36m${snd_name}: \033[1;37m$1\033[0m"
+      ;;
+    *)
+      echo "   ${snd_name}: $1"
+      ;;
+  esac
+  return 0
+}
+
+_do_default_setup() {
+  return 0
+}
+
+_do_default_fetch() {
+  return 0
+}
+
+_do_default_cache() {
+  mkdir -p $_cache_path
+
+  info "Caching data to ${_cache_path}"
+  for glob in "${snd_cache_globs[@]}"; do
+    cp $glob $_cache_path/
+  done
+}
+
+run_command() {
+  debug "${@}"
+  eval "${@}"
+  retval=$?
+  return $retval
+}
+
+do_setup() {
+  _do_default_setup
+}
+
+do_fetch() {
+  _do_default_fetch
+}
+
+do_process() {
+  error "You must implement do_process()"
+}
+
+do_cache() {
+  _do_default_cache
+}
+
+# Parse our arguments
+# First argument is the path to process
+#   This may be a directory or file. It is up to the
+#   script to handle the input.
+
+if [[ $# < 1 ]]; then
+  _exit 1 "You must specify the input path"
+fi
+
+input=$(realpath "$1" 2>/dev/null)
+
+if [[ ! -e $input ]]; then
+  _exit 1 "${input} does not exist"
+fi
+
+OPTIND=2
+while getopts "c:" opt; do
+  case "${opt}" in
+    c)
+      _cache_path=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Enter main workflow
+# - Clean the cache directory
+# -- This only runs if _snd_cache is set and exists
+# -- This prevents the output from being cached twice
+#    if the scripts produce output with timestamped names
+# - Create workspace
+# -- This is based on input path + timestmap
+# - Load processing script from CWD
+# - Enter workspace
+# -- TODO:  Support non-bash processing?
+#           This would require us to bring the processing
+#           into the workspace, or provide a pre-setup hook
+#           for the user to do themselves.
+# -- This is done so the processing scripts only
+#    have to worry about relative paths
+# - Perform setup actions
+# -- No default setup actions are defined.
+# -- This is a convience step so that scripts can
+#    perform any setup tasks beyond the workspace
+#    creation necessary for their success.
+# - Fetch data
+# -- Default behavior is to do nothing
+# -- In addition to fetching data, this step can be
+#    used to extract compressed source data
+# - Process data
+# -- This function must be defined by the user
+# - Cache data
+# -- Disabled by default. For use when in a distributed
+#    environment.
+# - Clean up workspace
+# -- This is disabled if cache is disabled OR DEBUG is set
+
+# The source data is expected to be the first argument
+#   passed to the script
+
+_clean_cache_directory
+_create_workspace
+
+info "Loading SANDII processing script"
+
+if source ${snd_lib_path}/${snd_process_type}/sandii.sh; then
+  info "Loaded processing script"
+else
+  ret=$?
+  error "Unable to load plan at $(pwd)"
+  exit ret
+fi
+
+_enter_workspace
+
+# We pass any additional arguments given to functions
+#  that can be defined by the user.
+do_setup $@
+do_fetch $@
+do_process $@
+
+if [ -z "${_cache_path:+x}" ]; then
+  warn "Skipping CACHE step"
+else
+  do_cache
+fi
+
+_clean_workspace
