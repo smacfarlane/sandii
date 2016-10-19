@@ -40,5 +40,5 @@ do_process() {
   info "Processing for SNPP"
 
   info "Running RT-STPS"
-  run_command "${RTSTPS_HOME}/bin/batch.sh npp.xml $input"
+  ${RTSTPS_HOME}/bin/batch.sh npp.xml "$input"
 }

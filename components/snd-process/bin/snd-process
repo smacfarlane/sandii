@@ -131,13 +131,6 @@ _do_default_cache() {
   done
 }
 
-run_command() {
-  debug "${@}"
-  eval "${@}"
-  retval=$?
-  return $retval
-}
-
 do_setup() {
   _do_default_setup
 }
@@ -226,12 +219,11 @@ _create_workspace
 
 info "Loading SANDII processing script"
 
-if source ${snd_lib_path}/${snd_process_type}/sandii.sh; then
+if source ${snd_lib_path}/${snd_process_type}/sandii.sh 2>/dev/null; then
   info "Loaded processing script"
 else
-  ret=$?
-  error "Unable to load plan at $(pwd)"
-  exit ret
+  _exit 1 "Unable to load plan at $(realpath -L "${snd_lib_path}/${snd_process_type}")/sandii.sh"
+
 fi
 
 _enter_workspace

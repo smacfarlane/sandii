@@ -40,5 +40,5 @@ do_process() {
   info "Processing for TERRA"
 
   info "Running RT-STPS"
-  run_command "${RTSTPS_HOME}/bin/batch.sh terra.xml $input"
+  ${RTSTPS_HOME}/bin/batch.sh terra.xml "$input"
 }

@@ -40,5 +40,5 @@ do_process() {
   info "Processing for AQUA"
 
   info "Running RT-STPS"
-  run_command "${RTSTPS_HOME}/bin/batch.sh aqua.xml $input"
+  ${RTSTPS_HOME}/bin/batch.sh aqua.xml "$input"
 }
