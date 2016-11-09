@@ -1,0 +1,59 @@
+name = "snpp"
+satellite = "SNPP"
+
+[tasks.ingest] 
+datatype = "raw"
+sensors = ["viirs","cris","omps","atms"]
+
+[tasks.rtstps]
+datatype = "rdr"
+sensors = ["viirs", "cris","omps","atms"]
+inputs = ["ingest"]
+requirements = ["rtstps"]
+
+[tasks.viirs-sdr]
+datatype = "sdr"
+sensors = ["viirs"]
+inputs = ["rtstps"]
+requirements = ["cspp-sdr"]
+
+[tasks.atms-sdr]
+datatype = "sdr"
+sensors = ["atms"]
+inputs = ["rtstps"]
+requirements = ["cspp-sdr"]
+
+[tasks.cris-sdr]
+datatype = "sdr"
+sensors = ["cris"]
+inputs = ["rtstps"]
+requirements = ["cspp-sdr"]
+
+[tasks.viirs-edr]
+datatype = "edr"
+sensors = ["viirs"]
+inputs = ["viirs-sdr"]
+requirements = ["cspp-viirs-edr"]
+
+[tasks.viirs-awips]
+datatype = "netcdf"
+sensors = ["viirs"]
+inputs = ["viirs-sdr"]
+requirements = ["polar2grid"]
+
+[tasks.viirs-geotiff]
+datatype = "geotiff"
+sensors = ["viirs"]
+inputs = ["viirs-sdr"]
+requirements = ["polar2grid"]
+
+[tasks.viirs-pqinsert]
+sensors = ["viirs"]
+inputs = ["viirs-awips"]
+requirements = ["ldm"]
+
+[tasks.nucaps]
+datatype = "hdf5?"
+sensors = ["cris", "atms"]
+inputs = ["cris-sdr","atms-sdr"]
+requirements = ["nucaps"]
