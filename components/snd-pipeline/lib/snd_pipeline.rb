@@ -1,0 +1,1 @@
+require 'snd_pipeline/pipeline'

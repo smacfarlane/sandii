@@ -1,0 +1,36 @@
+[metadata]
+
+[[tasks]]
+name = "first"
+display = "The First Task"
+inputs = []
+
+[[tasks]]
+name = "second"
+display = "The Second Task"
+inputs = ["first"]
+
+[[tasks]]
+name = "third"
+display = "The Third Task"
+inputs = ["first"]
+
+[[tasks]]
+name = "fourth"
+display = "The Fourth Task"
+inputs = ["second", "third"]
+
+[[tasks]]
+name = "fifth"
+display = "The Fifth Task"
+inputs = ["second", "fourth"]
+
+[[tasks]]
+name = "sixth"
+display = "The Sixth Task"
+inputs = ["first", "second", "fifth"]
+
+[[tasks]]
+name = "seventh"
+display = "The Seventh Task"
+inputs = ["sixth"]
